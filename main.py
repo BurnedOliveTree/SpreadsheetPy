@@ -16,14 +16,14 @@ class Complementary():
             y = y * 26 + (ord(name[i]) - 65)
         return y, int(x)
 
-    def main():
+    def main(y, x):
         # initiating curses window and all required functions for it
         stdscr = curses.initscr()   # initiate screen
         curses.noecho()   # display keys only when needed
         curses.cbreak()   # keys react without needing Enter
         stdscr.keypad(True)   # direction keys work as they should
 
-        curses.wrapper(Complementary.wrapped, *(2, 35))
+        curses.wrapper(Complementary.wrapped, y, x)
 
         curses.nocbreak()
         stdscr.keypad(False)
@@ -31,6 +31,7 @@ class Complementary():
         curses.endwin()
 
     def wrapped(stdscr, size_x, size_y):
+        # temp = ((curses.LINES - 2) // 2) % size_y
         spreadsheet_one = Spreadsheet(size_x, size_y)
         Spreadsheet.actual_main(spreadsheet_one, stdscr)
 
@@ -173,4 +174,4 @@ class Spreadsheet():
 
 
 if __name__ == "__main__":
-    Complementary.main()
+    Complementary.main(5, 35)
