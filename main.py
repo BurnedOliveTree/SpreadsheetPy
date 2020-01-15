@@ -31,7 +31,7 @@ class Complementary():
         curses.endwin()
 
     def wrapped(stdscr, size_x, size_y):
-        # temp = ((curses.LINES - 2) // 2) % size_y
+        # size_y = size_y % (((curses.LINES - 2) // 2) % size_y - 1)
         spreadsheet_one = Spreadsheet(size_x, size_y)
         Spreadsheet.actual_main(spreadsheet_one, stdscr)
 
