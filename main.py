@@ -1,6 +1,65 @@
 import curses
 
 
+class Formula():
+    def recreate(name, x):
+        y = 0
+        for i in range(len(name)):
+            y = y * 26 + (ord(name[i]) - 65)
+        return y, int(x)
+
+    def decypher(text):
+        y, x = "", ""
+        for i in range(len(text)):
+            temp = text[i]
+            if temp.isnumeric():
+                x += temp
+            elif temp.isupper():
+                y += temp
+            elif temp.islower():
+                y += chr(ord(temp) - 32)
+        return y, x
+
+    def append_number(label, splited, temp):
+        if temp.isnumeric():
+            splited.append(temp)
+        else:
+            y, x = (Formula.recreate(*Formula.decypher(temp)))
+            if label[y][x] == '' or not label[y][x].isnumeric:
+                splited.append('text')
+            else:
+                splited.append(label[y][x])
+        return splited, temp
+
+    def construct_formula(label, temp, signs):
+        splited = []
+        very_temp = ''
+        for i in range(len(temp)):
+            if temp[i] in signs[0]:
+                splited, very_temp = Formula.append_number(label, splited, very_temp)
+                splited.append(temp[i])
+                very_temp = ''
+            else:
+                very_temp += temp[i]
+        splited, very_temp = Formula.append_number(label, splited, very_temp)
+        return splited
+
+    def check_formula(splited):
+        for i in range(len(splited)):
+            if splited[i] == 'text':
+                if i == 0:
+                    neighbour = ['+', splited[i+1]]
+                elif i == len(splited) - 1:
+                    neighbour = [splited[i-1], '+']
+                else:
+                    neighbour = [splited[i-1], splited[i+1]]
+                if '*' in neighbour or '/' in neighbour or '^' in neighbour:
+                    splited[i] = '1'
+                else:
+                    splited[i] = '0'
+        return splited
+
+
 class Spreadsheet():
     def __init__(self, size_x, size_y):
         self.label = [['' for x in range(size_x)] for y in range(size_y)]
@@ -26,47 +85,10 @@ class Spreadsheet():
         else:
             return Spreadsheet.create_y_label(y-1, name)
 
-    @staticmethod
-    def recreate(name, x):
-        y = 0
-        for i in range(len(name)):
-            y = y * 26 + (ord(name[i]) - 65)
-        return y, int(x)
-
-    def decypher(self, text):
-        y, x = "", ""
-        for i in range(len(text)):
-            temp = text[i]
-            if temp.isnumeric():
-                x += temp
-            elif temp.isupper():
-                y += temp
-            elif temp.islower():
-                y += chr(ord(temp) - 32)
-        return y, x
-
-    def calculate(self):
-        self.formulas[self.x][self.y] = self.label[self.x][self.y]
+    def calculate(self, x, y):
         signs = [['^', '*', '/', '+', '-'], [0, 0, 0, 0, 0]]
-        temp = self.label[self.x][self.y][1:]
-        splited = []
-        very_temp = ''
-        for i in range(len(temp)):
-            if temp[i] in signs[0]:
-                if very_temp.isnumeric():
-                    splited.append(very_temp)
-                else:
-                    y, x = (Spreadsheet.recreate(*Spreadsheet.decypher(self, very_temp)))
-                    splited.append(self.label[y][x])
-                splited.append(temp[i])
-                very_temp = ''
-            else:
-                very_temp += temp[i]
-        if very_temp.isnumeric():
-            splited.append(very_temp)
-        else:
-            y, x = (Spreadsheet.recreate(*Spreadsheet.decypher(self, very_temp)))
-            splited.append(self.label[y][x])
+        splited = Formula.construct_formula(self.label, self.formulas[x][y][1:], signs)
+        splited = Formula.check_formula(splited)
         for i in range(len(splited)):
             for j in range(len(signs[1])):
                 if splited[i] == signs[0][j]:
@@ -82,7 +104,13 @@ class Spreadsheet():
                     del splited[temp+1]
                     signs[1][i] -= 1
                 temp -= 1
-        self.label[self.x][self.y] = str(splited[0])
+        self.label[x][y] = str(splited[0])
+
+    def refresh(self):
+        for x in range(self.y_max):
+            for y in range(self.x_max):
+                if self.formulas[x][y] != '':
+                    Spreadsheet.calculate(self, x, y)
 
     def actual_main(self, stdscr):
         input_key = 'A'
@@ -102,8 +130,6 @@ class Spreadsheet():
             elif input_key == fn_key[3]:
                 if self.y+1 < self.x_max:
                     self.y += 1
-            elif input_key == " ":
-                pass
             else:
                 if self.formulas[self.x][self.y] != '':
                     self.label[self.x][self.y] = self.formulas[self.x][self.y]
@@ -119,9 +145,12 @@ class Spreadsheet():
                     input_key = stdscr.getkey()
                 if len(self.label[self.x][self.y]) > 0:
                     if self.label[self.x][self.y][0] == "=":
-                        Spreadsheet.calculate(self)
+                        self.formulas[self.x][self.y] = self.label[self.x][self.y]
+                        Spreadsheet.calculate(self, self.x, self.y)
                         self.cell_size[self.x] = 1
                         Spreadsheet.set_cell_size(self)
+                    else:
+                        Spreadsheet.refresh(self)
             if input_key in fn_key and input_key != chr(27):
                 input_key = 'A'
 
