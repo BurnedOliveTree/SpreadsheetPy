@@ -1,41 +1,6 @@
 import curses
 
 
-class Complementary():
-    def create_y_label(y, name=""):
-        name = chr(65 + (y % 26)) + name
-        y = y // 26
-        if y == 0:
-            return name
-        else:
-            return Complementary.create_y_label(y-1, name)
-
-    def recreate(name, x):
-        y = 0
-        for i in range(len(name)):
-            y = y * 26 + (ord(name[i]) - 65)
-        return y, int(x)
-
-    def main(y, x):
-        # initiating curses window and all required functions for it
-        stdscr = curses.initscr()   # initiate screen
-        curses.noecho()   # display keys only when needed
-        curses.cbreak()   # keys react without needing Enter
-        stdscr.keypad(True)   # direction keys work as they should
-
-        curses.wrapper(Complementary.wrapped, y, x)
-
-        curses.nocbreak()
-        stdscr.keypad(False)
-        curses.echo()
-        curses.endwin()
-
-    def wrapped(stdscr, size_x, size_y):
-        # size_y = size_y % (((curses.LINES - 2) // 2) % size_y - 1)
-        spreadsheet_one = Spreadsheet(size_x, size_y)
-        Spreadsheet.actual_main(spreadsheet_one, stdscr)
-
-
 class Spreadsheet():
     def __init__(self, size_x, size_y):
         self.label = [['' for x in range(size_x)] for y in range(size_y)]
@@ -46,11 +11,27 @@ class Spreadsheet():
         self.y = 0  # current y
         self.cell_size = [1 for y in range(size_y)]
         self.x_labels = [str(x) for x in range(size_x)]
-        self.y_labels = [Complementary.create_y_label(y) for y in range(size_y)]
+        self.y_labels = [Spreadsheet.create_y_label(y) for y in range(size_y)]
         if len(self.y_labels) > 26:
             self.over_Z = True
         else:
             self.over_Z = False
+
+    @staticmethod
+    def create_y_label(y, name=""):
+        name = chr(65 + (y % 26)) + name
+        y = y // 26
+        if y == 0:
+            return name
+        else:
+            return Spreadsheet.create_y_label(y-1, name)
+
+    @staticmethod
+    def recreate(name, x):
+        y = 0
+        for i in range(len(name)):
+            y = y * 26 + (ord(name[i]) - 65)
+        return y, int(x)
 
     def decypher(self, text):
         y, x = "", ""
@@ -75,7 +56,7 @@ class Spreadsheet():
                 if very_temp.isnumeric():
                     splited.append(very_temp)
                 else:
-                    y, x = (Complementary.recreate(*Spreadsheet.decypher(self, very_temp)))
+                    y, x = (Spreadsheet.recreate(*Spreadsheet.decypher(self, very_temp)))
                     splited.append(self.label[y][x])
                 splited.append(temp[i])
                 very_temp = ''
@@ -84,7 +65,7 @@ class Spreadsheet():
         if very_temp.isnumeric():
             splited.append(very_temp)
         else:
-            y, x = (Complementary.recreate(*Spreadsheet.decypher(self, very_temp)))
+            y, x = (Spreadsheet.recreate(*Spreadsheet.decypher(self, very_temp)))
             splited.append(self.label[y][x])
         for i in range(len(splited)):
             for j in range(len(signs[1])):
@@ -173,5 +154,27 @@ class Spreadsheet():
                     self.cell_size[y] = len(self.label[y][x])
 
 
+def main(x, y):
+    # initiating curses window and all required functions for it
+    stdscr = curses.initscr()   # initiate screen
+    curses.noecho()   # display keys only when needed
+    curses.cbreak()   # keys react without needing Enter
+    stdscr.keypad(True)   # direction keys work as they should
+
+    curses.wrapper(wrapped, x, y)
+
+    curses.nocbreak()
+    stdscr.keypad(False)
+    curses.echo()
+    curses.endwin()
+
+
+def wrapped(stdscr, size_x, size_y):
+    while 3 + 2 * size_y > curses.LINES:
+        size_y -= 1
+    spreadsheet_one = Spreadsheet(size_y, size_x)
+    Spreadsheet.actual_main(spreadsheet_one, stdscr)
+
+
 if __name__ == "__main__":
-    Complementary.main(5, 35)
+    main(35, 7)
